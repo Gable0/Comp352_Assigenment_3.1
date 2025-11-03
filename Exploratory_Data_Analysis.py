@@ -511,4 +511,6 @@ print("warmer months or holidays. It could have also just been a good month for 
 
 #Thata a wrap
 print("\n")
+print("=====================================")
 print("END OF ASSIGNMENT 3.1")
+print("=====================================")
