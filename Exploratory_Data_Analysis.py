@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -88,7 +87,7 @@ print("\n")
 print("----------------------------------------------------")
 print("2.2: What is the MEDV for the lowest NOX value?")  
 print("----------------------------------------------------")
-min_nox_index = boston_df['NOX'].indexmin()
+min_nox_index = boston_df['NOX'].idxmin()
 medv_at_min_nox = boston_df.loc[min_nox_index, 'MEDV']
 min_nox = boston_df.loc[min_nox_index, 'NOX']
 print(f"Lowest NOX concentration: {min_nox}")
@@ -121,7 +120,7 @@ print(f"IQR of CRIM: {IQR:.4f}")
 #2.4 Subset of Outliers and Compare AGE mean
 print("\n")
 print("----------------------------------------------------")
-print("2.3: Boxplot of per capita crime rate (CRIM)")
+print("2.4: Subset outlier crime rates and compare AGE means")
 print("----------------------------------------------------")
 l_bound = Q1 - 1.5 * IQR
 u_bound = Q3 + 1.5 * IQR
@@ -173,7 +172,7 @@ print("This suggests that areas further from employment centers may have lower p
 #2.6 Scatter plot of RAD vs TAX with Correlation
 print("\n")
 print("----------------------------------------------------")
-print("2.6: Scatter plot of DIS vs NOX with Correlation")
+print("2.6: Scatter plot of RAD vs TAX with Correlation")
 print("----------------------------------------------------")
 plt.figure(figsize=(10, 6))
 plt.scatter(boston_df['RAD'], boston_df['TAX'], color='green', alpha=0.6)
@@ -196,4 +195,32 @@ print("leading to higher taxes.")
 print("\n")
 print(f"Unique values in RAD: {sorted(boston_df['RAD'].unique())}")
 print("Observation: The RAD variable is discrete, representing specific indices of accessibility to radial highways.")
+
+
+
+#Problem 3: Tips from Seaborn Library
+print("\n")
+print("=====================================")
+print("Problem 3: Tips from Seaborn Library")
+print("=====================================")
+
+
+#3.1 Import Tips dataset
+print("\n")
+print("----------------------------------------------------")
+print("3.1: Import Tips dataset")
+print("----------------------------------------------------")
+
+#get the tips dataset from seaborn
+tips_df = sns.load_dataset('tips')
+tips_df.head()
+
+print(f"Tips Dataset Dimensions: {tips_df.shape[0]} rows and {tips_df.shape[1]} columns")
+print("First 5 rows of the dataset:")
+print(tips_df.head())
+
+
+
+
+
 
