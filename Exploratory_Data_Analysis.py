@@ -220,6 +220,134 @@ print("First 5 rows of the dataset:")
 print(tips_df.head())
 
 
+#3.2 Days of the Week and Highest Bill 
+print("\n")
+print("----------------------------------------------------")
+print("3.2: Days of the Week and Highest Bill")
+print("----------------------------------------------------")
+max_bill_index = tips_df['total_bill'].idxmax()
+day_of_max_bill = tips_df.loc[max_bill_index, 'day']
+max_bill_amount = tips_df.loc[max_bill_index, 'total_bill']
+print(f"Day with Highest Total Bill: {day_of_max_bill}")
+print(f"Highest Total Bill Amount: ${max_bill_amount:.2f}")
+
+
+#3.3 Lunch vs Dinner Smoker Analysis
+print("\n")
+print("----------------------------------------------------")
+print("3.3: Lunch vs Dinner Smoker Analysis")
+print("----------------------------------------------------")
+
+#Lunch vs Dinner total
+time_count = tips_df.groupby('time').size().to_frame('Total Count')
+print("Total Customers by Time:")
+print(time_count)
+
+#Lunch vs Dinner smokers
+smoker_time_count = tips_df.groupby(['time', 'smoker']).size().unstack(fill_value=0)
+print("\nSmokers by Time:")
+print(smoker_time_count)
+
+#Calculate Total Smokers vs Non-Smokers
+smoker_total = tips_df('time')['smoker'].value_counts().unstack(fill_value=0)
+total = smoker_total.sum(axis=1)
+smokers_yesNo = smoker_total['Yes']
+
+#Join Dataframe
+# Join dataframes
+combined_diners = pd.DataFrame({
+    'total_count': time_count['count'],
+    'smokers': smokers_yesNo
+})
+
+combined_diners['smoker_percentage'] = (combined_diners['smokers'] / combined_diners['total_count'] * 100).round(2)
+print("\nSmoker Analysis by Time:")
+print(combined_diners)
+
+print("\nObservation: Dinner has a higher total number of customers as well as a higher number of smokers compared to lunch.")
+
+
+#3.4 Boxplot of Total Bill by Sex
+print("\n")
+print("----------------------------------------------------")
+print("3.4: Boxplot of Total Bill by Sex")
+print("----------------------------------------------------")
+plt.figure(figsize=(10, 6))
+sns.boxplot
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='sex', y='total_bill', data=tips_df, palette='Set2')
+plt.title('Boxplot of Total Bill by Sex', fontsize=16)
+plt.xlabel('Sex', fontsize=14)  
+plt.ylabel('Total Bill ($)', fontsize=14)
+plt.grid(axis='y', alpha=0.75)
+plt.savefig('total_bill_by_sex_boxplot.png')
+print("Boxplot saved as 'total_bill_by_sex_boxplot.png'")
+#plt.show()
+plt.close()     
+
+#Outliers Count
+male_tips = tips_df[tips_df['sex'] == 'Male']['tip']
+female_tips = tips_df[tips_df['sex'] == 'Female']['tip']
+
+def count_outliers(data):
+    Q1 = data.quantile(0.25)
+    Q3 = data.quantile(0.75)
+    IQR = Q3 - Q1
+    l_bound = Q1 - 1.5 * IQR
+    u_bound = Q3 + 1.5 * IQR
+    outliers = data[(data < l_bound) | (data > u_bound)]
+    return len(outliers)
+
+male_outliers_count = count_outliers(male_tips)
+female_outliers_count = count_outliers(female_tips) 
+
+#Analysis by Kawalski 
+print(f"\nNumber of Outliers in Tips")
+print(f"Males: {male_outliers_count}")
+print(f"Females: {female_outliers_count}")
+
+print("\nObservation: The boxplot indicates that males generally have a higher tip amount compared to females.")
+
+#3.5 Boxblot of Tip Percentage by Sex that are below 70%
+print("\n")
+print("------------------------------------------------------------")
+print("3.5: Boxplot of Tip Percentage by Sex that are below 70%")
+print("------------------------------------------------------------")
+tips_df_filtered = tips_df[tips_df['tip'] / tips_df['total_bill'] < 0.7]
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='sex', y=tips_df_filtered['tip'] / tips_df_filtered['total_bill'], data=tips_df_filtered, palette='Set3')
+plt.title('Boxplot of Tip Percentage by Sex (Below 70%)', fontsize=16)
+plt.xlabel('Sex', fontsize=14)  
+plt.ylabel('Tip Percentage', fontsize=14)
+plt.grid(axis='y', alpha=0.75)
+plt.savefig('tip_percentage_by_sex_boxplot.png')
+print("Boxplot saved as 'tip_percentage_by_sex_boxplot.png'")
+#plt.show()
+plt.close() 
+
+male_percentages = tips_df_filtered[tips_df_filtered['sex'] == 'Male']['tip_percentage']
+female_percentages = tips_df_filtered[tips_df_filtered['sex'] == 'Female']['tip_percentage']
+
+#outliers count
+male_percentage_outliers = count_outliers(male_percentages)
+female_percentage_outliers = count_outliers(female_percentages)
+
+#Skewness test
+male_is_skewed = male_percentages.skew()
+female_is_skewed = female_percentages.skew()
+
+#Analysis by Analysis person 
+print(f"\nOutlier/Skewness Analysis of Tip Percentages")
+print(f"Male Outliers: {male_percentage_outliers}, Skewness: {male_is_skewed:.4f}")
+print(f"Female Outliers: {female_percentage_outliers}, Skewness: {female_is_skewed:.4f}")
+print(f"\n{'Males' if male_percentage_outliers > female_outliers_count else 'Females'} have more outliers in tip percentage.")
+print(f"{'Males' if abs(male_is_skewed) < abs(female_is_skewed) else 'Females'} have less skewed distribution of data.")
+
+
+
+
+
+
 
 
 
