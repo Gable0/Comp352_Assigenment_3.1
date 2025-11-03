@@ -478,9 +478,7 @@ monthly_vol['Year'] = monthly_vol['Year'] = monthly_vol['Date'].dt.year
 
 #Group them thangs
 timeline = (
-    monthly_vol.groupby(["Year", "Month"])["TotalVolume"]
-    .sum()
-    .reset_index()
+    monthly_vol.groupby(["Year", "Month"])["TotalVolume"].sum().reset_index()
 )
 
 #Plot that Timeline
