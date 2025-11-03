@@ -123,3 +123,77 @@ print("\n")
 print("----------------------------------------------------")
 print("2.3: Boxplot of per capita crime rate (CRIM)")
 print("----------------------------------------------------")
+l_bound = Q1 - 1.5 * IQR
+u_bound = Q3 + 1.5 * IQR
+print(f"Outlier Bounds: Lower = {l_bound:.4f}, Upper = {u_bound:.4f}")
+outliers_df = boston_df[(boston_df['CRIM'] < l_bound) | (boston_df['CRIM'] > u_bound)]
+non_outliers_df = boston_df[(boston_df['CRIM'] >= l_bound) & (boston_df['CRIM'] <= u_bound)]
+
+print(f"Number of Outliers: {len(outliers_df)}")
+print(f"Number of Non-Outliers: {len(non_outliers_df)}")
+
+#Compare Age means
+mean_age_outliers = outliers_df['AGE'].mean()
+mean_age_non_outliers = non_outliers_df['AGE'].mean()
+total_mean_age = boston_df['AGE'].mean() 
+
+print("\nMean AGE Comparison:")
+print(f"Mean AGE of Outliers: {mean_age_outliers:.2f}")
+print(f"Mean AGE of Non-Outliers: {mean_age_non_outliers:.2f}")
+print(f"Overall Mean AGE: {total_mean_age:.2f}")
+
+print(f"\nObservation: The mean AGE of outlier neighborhoods is {'higher' if mean_age_outliers > mean_age_non_outliers else 'lower'} ")
+print("than that of non-outlier neighborhoods. This suggests that neighborhoods with extreme crime rates tend to have older housing ")
+print("stock compared to those with typical crime rates.")
+
+
+#2.5 Scatter plot of DIS vs NOX with Correlation
+print("\n")
+print("----------------------------------------------------")
+print("2.5: Scatter plot of DIS vs NOX with Correlation")
+print("----------------------------------------------------")
+plt.figure(figsize=(10, 6))
+plt.scatter(boston_df['DIS'], boston_df['NOX'], color='purple', alpha=0.6)
+plt.title('Scatter Plot of DIS vs NOX', fontsize=16)
+plt.xlabel('DIS (Weighted distances to five Boston employment centres)', fontsize=14)
+plt.ylabel('NOX (Nitric oxides concentration)', fontsize=14)
+plt.grid(alpha=0.75)
+plt.savefig('dis_vs_nox_scatter.png')
+print("Scatter plot saved as 'dis_vs_nox_scatter.png'")
+#plt.show()
+plt.close()
+
+correlation_DISvsNOX = boston_df['DIS'].corr(boston_df['NOX'])
+print(f"\nCorrelation coefficient between DIS and NOX: {correlation_DISvsNOX:.4f}") 
+print(f"Observation: There is a strong negative correlation between DIS and NOX, indicating")
+print("that as the distance to employment centers increases, the nitric oxides concentration tends to decrease.")
+print("This suggests that areas further from employment centers may have lower pollution levels.")
+
+
+#2.6 Scatter plot of RAD vs TAX with Correlation
+print("\n")
+print("----------------------------------------------------")
+print("2.6: Scatter plot of DIS vs NOX with Correlation")
+print("----------------------------------------------------")
+plt.figure(figsize=(10, 6))
+plt.scatter(boston_df['RAD'], boston_df['TAX'], color='green', alpha=0.6)
+plt.title('Scatter Plot of RAD vs TAX', fontsize=16)
+plt.xlabel('RAD (Index of accessibility to radial highways)', fontsize=14)
+plt.ylabel('TAX (Full-value property-tax rate per $10,000)', fontsize=14)
+plt.grid(alpha=0.75)
+plt.savefig('rad_vs_tax_scatter.png')
+print("Scatter plot saved as 'rad_vs_tax_scatter.png'")
+#plt.show()
+plt.close()
+
+correlation_RADvsTAX = boston_df['RAD'].corr(boston_df['TAX'])
+print(f"\nCorrelation coefficient between RAD and TAX: {correlation_RADvsTAX:.4f}") 
+print(f"Observation: There is a strong correlation between RAD and TAX, indicating that as accessibility to radial highways increases, ") 
+print("the property-tax rate also tends to increase. This suggests that properties with better highway access may be valued higher, ")
+print("leading to higher taxes.") 
+
+#Check discrete RAD
+print("\n")
+print(f"Unique values in RAD: {sorted(boston_df['RAD'].unique())}")
+print("Observation: The RAD variable is discrete, representing specific indices of accessibility to radial highways.")
+
