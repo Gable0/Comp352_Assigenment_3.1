@@ -1,200 +1,278 @@
-import calendar
-import pandas as pd
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import seaborn as sns  # type: ignore[reportMissingTypeStubs]
-import warnings
-warnings.filterwarnings('ignore')
+import csv
+import math
+import statistics
+from pathlib import Path
 
-#Problem 1: Weights.tsv
+try:
+    import pandas as pd
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    pd = None
+
+try:
+    import seaborn as sns
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    sns = None
+
+try:
+    import matplotlib.pyplot as plt
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    plt = None
+
+
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def read_weights(path: Path) -> list[float]:
+    weights = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            value = line.strip()
+            if value:
+                weights.append(float(value))
+    return weights
+
+
+def read_boston(path: Path) -> tuple[list[str], list[dict[str, float]]]:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.reader(handle)
+        headers = [column.strip() for column in next(reader)]
+        rows = []
+        for raw_row in reader:
+            if not raw_row:
+                continue
+            cleaned_row: dict[str, float] = {}
+            for header, raw_value in zip(headers, raw_row):
+                value = raw_value.strip().strip('"').replace("\t", "")
+                cleaned_row[header] = float(value)
+            rows.append(cleaned_row)
+    return headers, rows
+
+
+def percentile(values: list[float], q: float) -> float:
+    if not values:
+        raise ValueError("percentile() arg is an empty sequence")
+    sorted_values = sorted(values)
+    position = (len(sorted_values) - 1) * q
+    lower_index = math.floor(position)
+    upper_index = math.ceil(position)
+    if lower_index == upper_index:
+        return sorted_values[int(position)]
+    lower_value = sorted_values[lower_index]
+    upper_value = sorted_values[upper_index]
+    return lower_value + (upper_value - lower_value) * (position - lower_index)
+
+
+def pearson_correlation(x_values: list[float], y_values: list[float]) -> float:
+    if len(x_values) != len(y_values):
+        raise ValueError("Sequences must be the same length for correlation.")
+    if len(x_values) < 2:
+        return float("nan")
+    mean_x = statistics.fmean(x_values)
+    mean_y = statistics.fmean(y_values)
+    numerator = sum((x - mean_x) * (y - mean_y) for x, y in zip(x_values, y_values))
+    denominator = math.sqrt(
+        sum((x - mean_x) ** 2 for x in x_values) * sum((y - mean_y) ** 2 for y in y_values)
+    )
+    if denominator == 0:
+        return float("nan")
+    return numerator / denominator
+
+
+def column(rows: list[dict[str, float]], name: str) -> list[float]:
+    return [row[name] for row in rows]
+
+
+# Problem 1: Weights.tsv
 print("\n")
 print("=====================================")
 print("Problem 1: Weights.tsv")
 print("=====================================")
 
-
-#1.1 Import Data from weights.tsv to a Pandas Series
+# 1.1 Import Data from weights.tsv to a sequence
 print("----------------------------------------------------")
-print("1.1: Import Data from weights.tsv to a Pandas Series") 
+print("1.1: Import Data from weights.tsv to a sequence")
 print("----------------------------------------------------")
-weights_df = pd.read_csv('weights.tsv', header=None) 
-weights_lbs = pd.Series(weights_df[0].values)
-print(f"Weight (lbs):\n{weights_lbs}")
+weights_lbs = read_weights(BASE_DIR / "weights.tsv")
+print("Weight (lbs):")
+for weight in weights_lbs:
+    print(weight)
 
-
-#1.2 Create new series with weights in kilograms
+# 1.2 Create new sequence with weights in kilograms
 print("\n")
 print("----------------------------------------------------")
-print("1.2: Create new series with weights in kilograms") 
+print("1.2: Create new series with weights in kilograms")
 print("----------------------------------------------------")
-weights_kgs = (weights_lbs * 0.453592).round(2)
-print(f"Weight (kgs):\n{weights_kgs}")
+weights_kgs = [round(weight * 0.453592, 2) for weight in weights_lbs]
+print("Weight (kgs):")
+for weight in weights_kgs:
+    print(weight)
 
-
-#1.3 Create new series with weights in kilograms
+# 1.3 Find the mean, median, and standard deviation
 print("\n")
 print("----------------------------------------------------")
-print("1.3: Find the mean, median, and standard deviation")  
+print("1.3: Find the mean, median, and standard deviation")
 print("----------------------------------------------------")
 print("Stuff for lbs:")
-print(f"Mean (lbs): {weights_lbs.mean():.2f}lbs")
-print(f"Median (lbs): {weights_lbs.median():.2f}lbs")
-print(f"Standard Deviation (lbs): {weights_lbs.std():.2f}lbs")
+print(f"Mean (lbs): {statistics.fmean(weights_lbs):.2f}lbs")
+print(f"Median (lbs): {statistics.median(weights_lbs):.2f}lbs")
+print(f"Standard Deviation (lbs): {statistics.stdev(weights_lbs):.2f}lbs")
 print("\n")
 print("Stuff for kgs:")
-print(f"Mean (kgs): {weights_kgs.mean():.2f}kgs")
-print(f"Median (kgs): {weights_kgs.median():.2f}kgs")
-print(f"Standard Deviation (kgs): {weights_kgs.std():.2f}kgs")
+print(f"Mean (kgs): {statistics.fmean(weights_kgs):.2f}kgs")
+print(f"Median (kgs): {statistics.median(weights_kgs):.2f}kgs")
+print(f"Standard Deviation (kgs): {statistics.stdev(weights_kgs):.2f}kgs")
 
-
-#1.4 Plot a histogram of the weights in kilograms
+# 1.4 Plot a histogram of the weights in kilograms
 print("\n")
 print("----------------------------------------------------")
-print("1.4: Plot a histogram of the weights in kilograms")  
+print("1.4: Plot a histogram of the weights in kilograms")
 print("----------------------------------------------------")
-plt.figure(figsize=(10, 6))
-plt.hist(weights_kgs, bins=10, color='skyblue', edgecolor='black')
-plt.title('Histogram of Weights in Kilograms', fontsize=16)
-plt.xlabel('Weight (kgs)', fontsize=14)
-plt.ylabel('Frequency', fontsize=14)
-plt.grid(axis='y', alpha=0.75)
-plt.savefig('weights_histogram.png')
-print("Histogram saved as 'weights_histogram.png'")
-#plt.show()
-plt.close()
+if plt is None:
+    print("Matplotlib is not available; skipping histogram plot.")
+else:
+    plt.figure(figsize=(10, 6))
+    plt.hist(weights_kgs, bins=10, color="skyblue", edgecolor="black")
+    plt.title("Histogram of Weights in Kilograms", fontsize=16)
+    plt.xlabel("Weight (kgs)", fontsize=14)
+    plt.ylabel("Frequency", fontsize=14)
+    plt.grid(axis="y", alpha=0.75)
+    plt.savefig(BASE_DIR / "weights_histogram.png")
+    print("Histogram saved as 'weights_histogram.png'")
+    plt.close()
 
-
-
-#Problem 2: Boston.csv
+# Problem 2: Boston.csv
 print("\n")
 print("=====================================")
 print("Problem 2: Boston.csv")
 print("=====================================")
 
-
-#2.1 Import Data from Boston.csv
+# 2.1 Import Data from Boston.csv
 print("\n")
 print("----------------------------------------------------")
-print("2.1: Import Data from Boston.csv")  
+print("2.1: Import Data from Boston.csv")
 print("----------------------------------------------------")
-boston_df = pd.read_csv('boston.csv')
-print(f"Data Dimentions: {boston_df.shape[0]} rows and {boston_df.shape[1]} columns")
+boston_headers, boston_rows = read_boston(BASE_DIR / "boston.csv")
+print(f"Data Dimensions: {len(boston_rows)} rows and {len(boston_headers)} columns")
 print("First 5 rows of the dataset:")
-print(boston_df.head())
+for index, row in enumerate(boston_rows[:5], start=1):
+    formatted_row = ", ".join(f"{header}: {row[header]}" for header in boston_headers)
+    print(f"Row {index}: {formatted_row}")
 
-
-#2.2 What is the MEDV (Owner-occupied home value) for the lowest NOX (Nitric oxides concentration) value?
+# 2.2 What is the MEDV (Owner-occupied home value) for the lowest NOX (Nitric oxides concentration) value?
 print("\n")
 print("----------------------------------------------------")
-print("2.2: What is the MEDV for the lowest NOX value?")  
+print("2.2: What is the MEDV for the lowest NOX value?")
 print("----------------------------------------------------")
-min_nox_index = boston_df['NOX'].idxmin()
-medv_at_min_nox = boston_df.loc[min_nox_index, 'MEDV']
-min_nox = boston_df.loc[min_nox_index, 'NOX']
-print(f"Lowest NOX concentration: {min_nox}")
-print(f"MEDV at lowest NOX concentration: ${medv_at_min_nox}k") 
+min_nox_row = min(boston_rows, key=lambda item: item["NOX"])
+print(f"Lowest NOX concentration: {min_nox_row['NOX']}")
+print(f"MEDV at lowest NOX concentration: ${min_nox_row['MEDV']}k")
 
-
-#2.3 Boxplot of CRIM and calculate IQR
+# 2.3 Boxplot of CRIM and calculate IQR
 print("\n")
 print("----------------------------------------------------")
 print("2.3: Boxplot of per capita crime rate (CRIM)")
 print("----------------------------------------------------")
-plt.figure(figsize=(10, 6))
-plt.boxplot(boston_df['CRIM'], vert=False)
-plt.title('Boxplot of Per Capita Crime Rate (CRIM)', fontsize=16)
-plt.xlabel('CRIM', fontsize=14)
-plt.grid(axis='x', alpha=0.75)
-plt.savefig('crim_boxplot.png')
-print("Boxplot saved as 'crim_boxplot.png'")    
-#plt.show()
-plt.close()
-# Calculate IQR
-Q1 = boston_df['CRIM'].quantile(0.25)
-Q3 = boston_df['CRIM'].quantile(0.75)
-IQR = Q3 - Q1
-print(f"Q1 of CRIM: {Q1:.4f}")
-print(f"Q3 of CRIM: {Q3:.4f}")
-print(f"IQR of CRIM: {IQR:.4f}")
+crim_values = column(boston_rows, "CRIM")
+if plt is None:
+    print("Matplotlib is not available; skipping CRIM boxplot.")
+else:
+    plt.figure(figsize=(10, 6))
+    plt.boxplot(crim_values, vert=False)
+    plt.title("Boxplot of Per Capita Crime Rate (CRIM)", fontsize=16)
+    plt.xlabel("CRIM", fontsize=14)
+    plt.grid(axis="x", alpha=0.75)
+    plt.savefig(BASE_DIR / "crim_boxplot.png")
+    print("Boxplot saved as 'crim_boxplot.png'")
+    plt.close()
+q1_crim = percentile(crim_values, 0.25)
+q3_crim = percentile(crim_values, 0.75)
+iqr_crim = q3_crim - q1_crim
+print(f"Q1 of CRIM: {q1_crim:.4f}")
+print(f"Q3 of CRIM: {q3_crim:.4f}")
+print(f"IQR of CRIM: {iqr_crim:.4f}")
 
-
-#2.4 Subset of Outliers and Compare AGE mean
+# 2.4 Subset of Outliers and Compare AGE mean
 print("\n")
 print("----------------------------------------------------")
 print("2.4: Subset outlier crime rates and compare AGE means")
 print("----------------------------------------------------")
-l_bound = Q1 - 1.5 * IQR
-u_bound = Q3 + 1.5 * IQR
-print(f"Outlier Bounds: Lower = {l_bound:.4f}, Upper = {u_bound:.4f}")
-outliers_df = boston_df[(boston_df['CRIM'] < l_bound) | (boston_df['CRIM'] > u_bound)]
-non_outliers_df = boston_df[(boston_df['CRIM'] >= l_bound) & (boston_df['CRIM'] <= u_bound)]
+lower_bound = q1_crim - 1.5 * iqr_crim
+upper_bound = q3_crim + 1.5 * iqr_crim
+print(f"Outlier Bounds: Lower = {lower_bound:.4f}, Upper = {upper_bound:.4f}")
+outliers = [row for row in boston_rows if row["CRIM"] < lower_bound or row["CRIM"] > upper_bound]
+non_outliers = [row for row in boston_rows if lower_bound <= row["CRIM"] <= upper_bound]
+print(f"Number of Outliers: {len(outliers)}")
+print(f"Number of Non-Outliers: {len(non_outliers)}")
 
-print(f"Number of Outliers: {len(outliers_df)}")
-print(f"Number of Non-Outliers: {len(non_outliers_df)}")
-
-#Compare Age means
-mean_age_outliers = outliers_df['AGE'].mean()
-mean_age_non_outliers = non_outliers_df['AGE'].mean()
-total_mean_age = boston_df['AGE'].mean() 
+mean_age_outliers = statistics.fmean(column(outliers, "AGE")) if outliers else float("nan")
+mean_age_non_outliers = statistics.fmean(column(non_outliers, "AGE")) if non_outliers else float("nan")
+mean_age_total = statistics.fmean(column(boston_rows, "AGE"))
 
 print("\nMean AGE Comparison:")
 print(f"Mean AGE of Outliers: {mean_age_outliers:.2f}")
 print(f"Mean AGE of Non-Outliers: {mean_age_non_outliers:.2f}")
-print(f"Overall Mean AGE: {total_mean_age:.2f}")
+print(f"Overall Mean AGE: {mean_age_total:.2f}")
 
-print(f"\nObservation: The mean AGE of outlier neighborhoods is {'higher' if mean_age_outliers > mean_age_non_outliers else 'lower'} ")
+comparison = "higher" if mean_age_outliers > mean_age_non_outliers else "lower"
+print(f"\nObservation: The mean AGE of outlier neighborhoods is {comparison} ")
 print("than that of non-outlier neighborhoods. This suggests that neighborhoods with extreme crime rates tend to have older housing ")
 print("stock compared to those with typical crime rates.")
 
-
-#2.5 Scatter plot of DIS vs NOX with Correlation
+# 2.5 Scatter plot of DIS vs NOX with Correlation
 print("\n")
 print("----------------------------------------------------")
 print("2.5: Scatter plot of DIS vs NOX with Correlation")
 print("----------------------------------------------------")
-plt.figure(figsize=(10, 6))
-plt.scatter(boston_df['DIS'], boston_df['NOX'], color='purple', alpha=0.6)
-plt.title('Scatter Plot of DIS vs NOX', fontsize=16)
-plt.xlabel('DIS (Weighted distances to five Boston employment centres)', fontsize=14)
-plt.ylabel('NOX (Nitric oxides concentration)', fontsize=14)
-plt.grid(alpha=0.75)
-plt.savefig('dis_vs_nox_scatter.png')
-print("Scatter plot saved as 'dis_vs_nox_scatter.png'")
-#plt.show()
-plt.close()
+dis_values = column(boston_rows, "DIS")
+nox_values = column(boston_rows, "NOX")
+if plt is None:
+    print("Matplotlib is not available; skipping DIS vs NOX scatter plot.")
+else:
+    plt.figure(figsize=(10, 6))
+    plt.scatter(dis_values, nox_values, color="purple", alpha=0.6)
+    plt.title("Scatter Plot of DIS vs NOX", fontsize=16)
+    plt.xlabel("DIS (Weighted distances to five Boston employment centres)", fontsize=14)
+    plt.ylabel("NOX (Nitric oxides concentration)", fontsize=14)
+    plt.grid(alpha=0.75)
+    plt.savefig(BASE_DIR / "dis_vs_nox_scatter.png")
+    print("Scatter plot saved as 'dis_vs_nox_scatter.png'")
+    plt.close()
 
-correlation_DISvsNOX = boston_df['DIS'].corr(boston_df['NOX'])
-print(f"\nCorrelation coefficient between DIS and NOX: {correlation_DISvsNOX:.4f}") 
-print(f"Observation: There is a strong negative correlation between DIS and NOX, indicating")
+correlation_dis_nox = pearson_correlation(dis_values, nox_values)
+print(f"\nCorrelation coefficient between DIS and NOX: {correlation_dis_nox:.4f}")
+print("Observation: There is a strong negative correlation between DIS and NOX, indicating")
 print("that as the distance to employment centers increases, the nitric oxides concentration tends to decrease.")
 print("This suggests that areas further from employment centers may have lower pollution levels.")
 
-
-#2.6 Scatter plot of RAD vs TAX with Correlation
+# 2.6 Scatter plot of RAD vs TAX with Correlation
 print("\n")
 print("----------------------------------------------------")
 print("2.6: Scatter plot of RAD vs TAX with Correlation")
 print("----------------------------------------------------")
-plt.figure(figsize=(10, 6))
-plt.scatter(boston_df['RAD'], boston_df['TAX'], color='green', alpha=0.6)
-plt.title('Scatter Plot of RAD vs TAX', fontsize=16)
-plt.xlabel('RAD (Index of accessibility to radial highways)', fontsize=14)
-plt.ylabel('TAX (Full-value property-tax rate per $10,000)', fontsize=14)
-plt.grid(alpha=0.75)
-plt.savefig('rad_vs_tax_scatter.png')
-print("Scatter plot saved as 'rad_vs_tax_scatter.png'")
-#plt.show()
-plt.close()
+rad_values = column(boston_rows, "RAD")
+tax_values = column(boston_rows, "TAX")
+if plt is None:
+    print("Matplotlib is not available; skipping RAD vs TAX scatter plot.")
+else:
+    plt.figure(figsize=(10, 6))
+    plt.scatter(rad_values, tax_values, color="green", alpha=0.6)
+    plt.title("Scatter Plot of RAD vs TAX", fontsize=16)
+    plt.xlabel("RAD (Index of accessibility to radial highways)", fontsize=14)
+    plt.ylabel("TAX (Full-value property-tax rate per $10,000)", fontsize=14)
+    plt.grid(alpha=0.75)
+    plt.savefig(BASE_DIR / "rad_vs_tax_scatter.png")
+    print("Scatter plot saved as 'rad_vs_tax_scatter.png'")
+    plt.close()
 
-correlation_RADvsTAX = boston_df['RAD'].corr(boston_df['TAX'])
-print(f"\nCorrelation coefficient between RAD and TAX: {correlation_RADvsTAX:.4f}") 
-print(f"Observation: There is a strong correlation between RAD and TAX, indicating that as accessibility to radial highways increases, ") 
+correlation_rad_tax = pearson_correlation(rad_values, tax_values)
+print(f"\nCorrelation coefficient between RAD and TAX: {correlation_rad_tax:.4f}")
+print("Observation: There is a strong correlation between RAD and TAX, indicating that as accessibility to radial highways increases, ")
 print("the property-tax rate also tends to increase. This suggests that properties with better highway access may be valued higher, ")
-print("leading to higher taxes.") 
+print("leading to higher taxes.")
 
-#Check discrete RAD
+# Check discrete RAD
 print("\n")
-print(f"Unique values in RAD: {sorted(boston_df['RAD'].unique())}")
+print(f"Unique values in RAD: {sorted({int(value) for value in rad_values})}")
 print("Observation: The RAD variable is discrete, representing specific indices of accessibility to radial highways.")
 
 
