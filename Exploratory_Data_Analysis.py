@@ -472,7 +472,7 @@ print(f"\nRegion with highest total volume: {highest_volume_region} with {highes
 region_focus_df = avocado_df_no_west[avocado_df_no_west['Region'] == highest_volume_region].copy()
 
 plt.figure(figsize=(10, 6))
-sns.histplot(region_focus_df['AveragePrice'], bins=25, color='steelblue', edgecolor='black')
+sns.histplot(data=region_focus_df, x='AveragePrice', bins=25, color='steelblue', edgecolor='black')
 plt.title(f'Histogram of Average Price in {highest_volume_region}', fontsize=16)
 plt.xlabel('Average Price ($)', fontsize=14)
 plt.ylabel('Frequency', fontsize=14)
@@ -486,8 +486,8 @@ mean_price_region = region_focus_df['AveragePrice'].mean()
 median_price_region = region_focus_df['AveragePrice'].median()
 price_range_region = region_focus_df['AveragePrice'].max() - region_focus_df['AveragePrice'].min()
 print(f"\nObservation: In {highest_volume_region}, the mean average price is ${mean_price_region:.2f}, "
-      f"the median is ${median_price_region:.2f}, and prices vary across a range of ${price_range_region:.2f}.\n"
-      "The histogram highlights how prices cluster for the busiest market.")
+    f"the median is ${median_price_region:.2f}, and prices vary across a range of ${price_range_region:.2f}.\n"
+    "The histogram highlights how prices cluster for the busiest market.")
 
 correlation_price_volume = region_focus_df['AveragePrice'].corr(region_focus_df['TotalVolume'])
 print(f"Correlation coefficient between Average Price and Total Volume in {highest_volume_region}: {correlation_price_volume:.4f}")
@@ -515,7 +515,7 @@ monthly_vol['Month'] = monthly_vol['Date'].dt.month
 timeline = (
     monthly_vol.groupby(["Year", "Month"])["TotalVolume"].sum().reset_index()
 )
-timeline['PeriodStart'] = pd.to_datetime(dict(year=timeline['Year'], month=timeline['Month'], day=1))
+timeline['PeriodStart'] = timeline.apply(lambda x: pd.Timestamp(year=x['Year'], month=x['Month'], day=1), axis=1)
 
 #Plot that Timeline
 plt.figure(figsize=(12, 6))
@@ -545,10 +545,10 @@ if len(unique_top_months) == 1:
     consistency_note = f"{month_names[unique_top_months[0]]} dominates every year in the dataset."
 else:
     consistency_note = "Peak sales months vary year by year, although the following months appear most frequently: " + \
-        ", ".join(sorted({month_names[m] for m in unique_top_months}))
+", ".join(sorted({month_names[m] for m in unique_top_months}))
 
-print(f"\nObservation: The month with the highest overall average volume is {month_names[highest_volume_month]} "
-      f"with an average of {month_avg_volume.max():,.0f} units sold.")
+print(f"\nObservation: The month with the highest overall average volume is {month_names[highest_volume_month]} ")
+print(f"with an average of {month_avg_volume.max():,.0f} units sold.")
 print(f"{consistency_note} A likely driver of these peaks is demand tied to food-centric events (e.g., summer barbecues or the NFL playoffs) and promotional cycles that boost avocado consumption.")
 
 
