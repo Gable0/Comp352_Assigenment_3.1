@@ -1,3 +1,4 @@
+import calendar
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -345,10 +346,163 @@ print(f"{'Males' if abs(male_is_skewed) < abs(female_is_skewed) else 'Females'} 
 
 
 
+#Problem 4: Avocado.csv
+print("\n")
+print("=====================================")
+print("Problem 4: Avocado.csv")
+print("=====================================")
 
 
+#4.1 Import Avocado dataset
+print("\n")
+print("----------------------------------------------------")
+print("4.1: Import Avocado dataset")
+print("----------------------------------------------------")
+print("\n")
+avocado_df = pd.read_csv('avocado.csv')
+print(f"Dataset Dimensions: {avocado_df.shape[0]} rows and {avocado_df.shape[1]} columns")
+print(f"\nMissing Values in Each Column:\n{avocado_df.isnull().sum()}")
+
+#Missing Values Analysis
+missing_values = pd.DataFrame({
+    'Missing Values': avocado_df.isnull().sum(),
+    'Percentage (%)': (avocado_df.isnull().sum() / len(avocado_df) * 100).round(2)
+})
+
+print(f"\nMissing values summary:\n{missing_values[missing_values['Missing_Count'] > 0]}")
+
+#Missing Values Handling
+print("\nHandling missing values...")
+
+print("Fill 'Type' missing values with mode...")
+avocado_df['Type'].fillna(avocado_df['Type'].mode()[0])
+
+print("Fill 'Year' missing values with median...")
+avocado_df['Year'].fillna(avocado_df['Year'].median())['Year'].fillna(avocado_df['Year'].median())
+
+print("Fill AllSize with 0 for missing values...")
+avocado_df['AllSizes'] = avocado_df['AllSizes'].fillna(0) 
+
+print(f"Total Missing Values: \n{avocado_df.isnull().sum()}") 
+
+#4.2 Convert to Categorical Data Type
+print("\n")
+print("----------------------------------------------------")
+print("4.2: Convert to Categorical Data Type")
+print("----------------------------------------------------")
+avocado_df['Type'] = avocado_df['Type'].astype('category')
+avocado_df['Year'] = avocado_df['Year'].astype('category')
+avocado_df['Region'] = avocado_df['Region'].astype('category')
+
+#Exclude TotalUS and West regions from Region
+avocado_df_no_west = avocado_df[~avocado_df['Region'].isin(['TotalUS', 'West'])]
+avocado_df_no_west['Date'] = pd.to_datetime(avocado_df['Date'], format='%Y-%m-%d')
+avocado_df_no_west = avocado_df_no_west.sort_values(by='Date')
+
+print(f"Filtered Dataset Dimensions (excluding TotalUS and West): {avocado_df_no_west.shape[0]} rows and {avocado_df_no_west.shape[1]} columns")
+
+#2016 vs 2017
+print("\n")
+mean_2016 = avocado_df_no_west[avocado_df_no_west['Year'] == 2016]['AveragePrice'].mean()
+mean_2017 = avocado_df_no_west[avocado_df_no_west['Year'] == 2017]['AveragePrice'].mean()
+print(f"Mean Average Price in 2016: ${mean_2016:.2f}")
+print(f"Mean Average Price in 2017: ${mean_2017:.2f}")
+print("Observation: The mean average price of avocados increased from 2016 to 2017, indicating a ")
+print("rising trend in avocado prices during this period.")
 
 
+#4.3 Total Volume by Region Bar Chart
+print("\n")
+print("----------------------------------------------------")
+print("4.3: Total Volume by Region Bar Chart")
+print("----------------------------------------------------")
+
+vol_by_region = avocado_df_no_west.groupby('Region')['Total Volume'].sum().sort_values(ascending=True)
+print(f"\nTotal Volume by Region:\n{vol_by_region}")
+
+#Create Bar Chart
+plt.figure(figsize=(12, 8))
+vol_by_region.plot(kind='barh', color='teal')
+plt.title('Total Volume of Avocados Sold by Region', fontsize=16)
+plt.xlabel('Total Volume', fontsize=14)
+plt.ylabel('Region', fontsize=14)
+plt.grid(axis='x', alpha=0.75)
+plt.savefig('total_volume_by_region_bar_chart.png')     
+print("Bar chart saved as 'total_volume_by_region_bar_chart.png'")
+#plt.show()
+plt.close()
+
+highest_volume = vol_by_region.idxmax()
+print(f"\nRegion with Highest Total Volume: {highest_volume} with {vol_by_region.max():,.0f} units sold.")
+
+#Subset thing with histogram
+state_vol_data = avocado_df_no_west[avocado_df_no_west['Region'].str.contains('California|Texas|Florida')]
+#create histogram
+plt.figure(figsize=(10, 6))
+sns.histplot(data=state_vol_data, x='Total Volume', hue='Region', element='step', stat='density', common_norm=False, bins=30)
+plt.title('Histogram of Total Volume for California, Texas, and Florida', fontsize=16)
+plt.xlabel('Total Volume', fontsize=14)
+plt.ylabel('Density', fontsize=14)
+plt.grid(alpha=0.75)
+plt.savefig('state_total_volume_histogram.png')
+print("Histogram saved as 'state_total_volume_histogram.png'")
+#plt.show()
+plt.close()
+
+print("\nObservation: California has the highest total volume of avocados sold among the regions, ")
+print("likely due to its large population and strong demand for avocados. ")
+print(f"Mean Price: ${state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].mean():.2f} | ")
+print(f"Median Price: ${state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].median():.2f}")
+print(f"Price Range: ${state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].max() - state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].min():.2f}")
+
+#Correlation between Average Price and Total Volume
+correlation_price_volume = state_vol_data['AveragePrice'].corr(state_vol_data['Total Volume'])
+print(f"\nCorrelation coefficient between Average Price and Total Volume: {correlation_price_volume:.4f}") 
+print("Observation: There is a weak negative correlation between Average Price and Total Volume, suggesting that as the ")
+print("price of avocados increases, the total volume sold tends to decrease slightly. This indicates that higher prices ")
+print("may lead to reduced demand.")
 
 
+#4.4 Timeline Plot
+print("\n")
+print("----------------------------------------------------")
+print("4.4: Timeline Plot of Average Price Over Time")
+print("----------------------------------------------------")
 
+monthly_vol = avocado_df_no_west.copy()
+monthly_vol['Month'] = monthly_vol['Month'] = monthly_vol['Date'].dt.month
+monthly_vol['Year'] = monthly_vol['Year'] = monthly_vol['Date'].dt.year
+
+#Group them thangs
+timeline = monthly_vol.groupby(["Year","Month"])
+['Total Volume'].sum().reset_index()
+
+#Plot that Timeline
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=timeline, x=pd.to_datetime(timeline[['Year', 'Month']].assign(DAY=1)), y='Total Volume', marker='o', color='orange')
+plt.title('Timeline of Total Volume of Avocados Sold Over Time', fontsize=16)
+plt.xlabel('Date', fontsize=14)
+plt.ylabel('Total Volume', fontsize=14)
+plt.grid(alpha=0.75)
+plt.xticks(range(1, 13), ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+plt.savefig('timeline_total_volume_over_time.png')
+print("Timeline plot saved as 'timeline_total_volume_over_time.png'")
+#plt.show()
+plt.close()
+
+#Highest average
+month_avg = monthly_vol.groupby(['Year', 'Month'])['AveragePrice'].mean()
+highest_avg_index = month_avg.idxmax()
+highest_avg_year, highest_avg_month_num = highest_avg_index
+highest_avg_month = calendar.month_name[int(highest_avg_month_num)]
+highest_avg_value = month_avg.loc[highest_avg_index]
+
+print(f"Observation: The month with the highest average price of avocados is {highest_avg_month} {highest_avg_year} ")
+print(f"with an average price of ${highest_avg_value:.2f}.")
+print("Possible reasons for this peak could include seasonal demand fluctuations, supply constraints, or ")
+print("increased consumer interest during that period. Or maybe it was just a really good guac month.")
+
+
+#Thats a wrap babyy
+print("\n")
+print("\n END OF ASSIGNMENT 3.1")
