@@ -250,14 +250,13 @@ print("\nSmokers by Time:")
 print(smoker_time_count)
 
 #Calculate Total Smokers vs Non-Smokers
-smoker_total = tips_df('time')['smoker'].value_counts().unstack(fill_value=0)
-total = smoker_total.sum(axis=1)
-smokers_yesNo = smoker_total['Yes']
+smoker_total = tips_df.groupby('time')['smoker'].value_counts().unstack(fill_value=0)
+smokers_yesNo = smoker_total.get('Yes', pd.Series(0, index=smoker_total.index))
 
 #Join Dataframe
 # Join dataframes
 combined_diners = pd.DataFrame({
-    'total_count': time_count['count'],
+    'total_count': time_count['Total Count'],
     'smokers': smokers_yesNo
 })
 
@@ -314,9 +313,11 @@ print("\n")
 print("------------------------------------------------------------")
 print("3.5: Boxplot of Tip Percentage by Sex that are below 70%")
 print("------------------------------------------------------------")
-tips_df_filtered = tips_df[tips_df['tip'] / tips_df['total_bill'] < 0.7]
+tips_df_filtered = tips_df.assign(
+    tip_percentage=tips_df['tip'] / tips_df['total_bill']
+).loc[lambda df: df['tip_percentage'] < 0.7]
 plt.figure(figsize=(10, 6))
-sns.boxplot(x='sex', y=tips_df_filtered['tip'] / tips_df_filtered['total_bill'], data=tips_df_filtered, palette='Set3')
+sns.boxplot(x='sex', y='tip_percentage', data=tips_df_filtered, palette='Set3')
 plt.title('Boxplot of Tip Percentage by Sex (Below 70%)', fontsize=16)
 plt.xlabel('Sex', fontsize=14)  
 plt.ylabel('Tip Percentage', fontsize=14)
@@ -341,7 +342,7 @@ female_is_skewed = female_percentages.skew()
 print(f"\nOutlier/Skewness Analysis of Tip Percentages")
 print(f"Male Outliers: {male_percentage_outliers}, Skewness: {male_is_skewed:.4f}")
 print(f"Female Outliers: {female_percentage_outliers}, Skewness: {female_is_skewed:.4f}")
-print(f"\n{'Males' if male_percentage_outliers > female_outliers_count else 'Females'} have more outliers in tip percentage.")
+print(f"\n{'Males' if male_percentage_outliers > female_percentage_outliers else 'Females'} have more outliers in tip percentage.")
 print(f"{'Males' if abs(male_is_skewed) < abs(female_is_skewed) else 'Females'} have less skewed distribution of data.")
 
 
@@ -365,7 +366,7 @@ print(f"\nMissing Values in Each Column:\n{avocado_df.isnull().sum()}")
 
 #Missing Values Analysis
 missing_values = pd.DataFrame({
-    'Missing Values': avocado_df.isnull().sum(),
+    'Missing_Count': avocado_df.isnull().sum(),
     'Percentage (%)': (avocado_df.isnull().sum() / len(avocado_df) * 100).round(2)
 })
 
@@ -375,10 +376,10 @@ print(f"\nMissing values summary:\n{missing_values[missing_values['Missing_Count
 print("\nHandling missing values...")
 
 print("Fill 'Type' missing values with mode...")
-avocado_df['Type'].fillna(avocado_df['Type'].mode()[0])
+avocado_df['Type'] = avocado_df['Type'].fillna(avocado_df['Type'].mode()[0])
 
 print("Fill 'Year' missing values with median...")
-avocado_df['Year'].fillna(avocado_df['Year'].median())['Year'].fillna(avocado_df['Year'].median())
+avocado_df['Year'] = avocado_df['Year'].fillna(avocado_df['Year'].median())
 
 print("Fill AllSize with 0 for missing values...")
 avocado_df['AllSizes'] = avocado_df['AllSizes'].fillna(0) 
@@ -395,8 +396,8 @@ avocado_df['Year'] = avocado_df['Year'].astype('category')
 avocado_df['Region'] = avocado_df['Region'].astype('category')
 
 #Exclude TotalUS and West regions from Region
-avocado_df_no_west = avocado_df[~avocado_df['Region'].isin(['TotalUS', 'West'])]
-avocado_df_no_west['Date'] = pd.to_datetime(avocado_df['Date'], format='%Y-%m-%d')
+avocado_df_no_west = avocado_df[~avocado_df['Region'].isin(['TotalUS', 'West'])].copy()
+avocado_df_no_west['Date'] = pd.to_datetime(avocado_df_no_west['Date'], format='%Y-%m-%d')
 avocado_df_no_west = avocado_df_no_west.sort_values(by='Date')
 
 print(f"Filtered Dataset Dimensions (excluding TotalUS and West): {avocado_df_no_west.shape[0]} rows and {avocado_df_no_west.shape[1]} columns")
@@ -417,7 +418,7 @@ print("----------------------------------------------------")
 print("4.3: Total Volume by Region Bar Chart")
 print("----------------------------------------------------")
 
-vol_by_region = avocado_df_no_west.groupby('Region')['Total Volume'].sum().sort_values(ascending=True)
+vol_by_region = avocado_df_no_west.groupby('Region')['TotalVolume'].sum().sort_values(ascending=True)
 print(f"\nTotal Volume by Region:\n{vol_by_region}")
 
 #Create Bar Chart
@@ -436,10 +437,12 @@ highest_volume = vol_by_region.idxmax()
 print(f"\nRegion with Highest Total Volume: {highest_volume} with {vol_by_region.max():,.0f} units sold.")
 
 #Subset thing with histogram
-state_vol_data = avocado_df_no_west[avocado_df_no_west['Region'].str.contains('California|Texas|Florida')]
+state_vol_data = avocado_df_no_west[
+    avocado_df_no_west['Region'].str.contains('California|Texas|Florida', na=False)
+]
 #create histogram
 plt.figure(figsize=(10, 6))
-sns.histplot(data=state_vol_data, x='Total Volume', hue='Region', element='step', stat='density', common_norm=False, bins=30)
+sns.histplot(data=state_vol_data, x='TotalVolume', hue='Region', element='step', stat='density', common_norm=False, bins=30)
 plt.title('Histogram of Total Volume for California, Texas, and Florida', fontsize=16)
 plt.xlabel('Total Volume', fontsize=14)
 plt.ylabel('Density', fontsize=14)
@@ -456,7 +459,7 @@ print(f"Median Price: ${state_vol_data[state_vol_data['Region'] == 'California']
 print(f"Price Range: ${state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].max() - state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].min():.2f}")
 
 #Correlation between Average Price and Total Volume
-correlation_price_volume = state_vol_data['AveragePrice'].corr(state_vol_data['Total Volume'])
+correlation_price_volume = state_vol_data['AveragePrice'].corr(state_vol_data['TotalVolume'])
 print(f"\nCorrelation coefficient between Average Price and Total Volume: {correlation_price_volume:.4f}") 
 print("Observation: There is a weak negative correlation between Average Price and Total Volume, suggesting that as the ")
 print("price of avocados increases, the total volume sold tends to decrease slightly. This indicates that higher prices ")
@@ -474,12 +477,21 @@ monthly_vol['Month'] = monthly_vol['Month'] = monthly_vol['Date'].dt.month
 monthly_vol['Year'] = monthly_vol['Year'] = monthly_vol['Date'].dt.year
 
 #Group them thangs
-timeline = monthly_vol.groupby(["Year","Month"])
-['Total Volume'].sum().reset_index()
+timeline = (
+    monthly_vol.groupby(["Year", "Month"])["TotalVolume"]
+    .sum()
+    .reset_index()
+)
 
 #Plot that Timeline
 plt.figure(figsize=(12, 6))
-sns.lineplot(data=timeline, x=pd.to_datetime(timeline[['Year', 'Month']].assign(DAY=1)), y='Total Volume', marker='o', color='orange')
+sns.lineplot(
+    data=timeline,
+    x=pd.to_datetime(timeline[['Year', 'Month']].assign(DAY=1)),
+    y='TotalVolume',
+    marker='o',
+    color='orange'
+)
 plt.title('Timeline of Total Volume of Avocados Sold Over Time', fontsize=16)
 plt.xlabel('Date', fontsize=14)
 plt.ylabel('Total Volume', fontsize=14)
