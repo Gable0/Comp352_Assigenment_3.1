@@ -213,10 +213,10 @@ print("----------------------------------------------------")
 
 #get the tips dataset from seaborn
 tips_df = sns.load_dataset('tips')
-tips_df.head()
+tips_df['tip_percent'] = ((tips_df['tip'] / tips_df['total_bill']) * 100).round(2)
 
 print(f"Tips Dataset Dimensions: {tips_df.shape[0]} rows and {tips_df.shape[1]} columns")
-print("First 5 rows of the dataset:")
+print("First 5 rows of the dataset with tip_percent column:")
 print(tips_df.head())
 
 
@@ -225,11 +225,14 @@ print("\n")
 print("----------------------------------------------------")
 print("3.2: Days of the Week and Highest Bill")
 print("----------------------------------------------------")
-max_bill_index = tips_df['total_bill'].idxmax()
-day_of_max_bill = tips_df.loc[max_bill_index, 'day']
-max_bill_amount = tips_df.loc[max_bill_index, 'total_bill']
-print(f"Day with Highest Total Bill: {day_of_max_bill}")
-print(f"Highest Total Bill Amount: ${max_bill_amount:.2f}")
+available_days = tips_df['day'].dropna().unique()
+print(f"Days represented in the dataset: {sorted(available_days)}")
+
+avg_bill_by_day = tips_df.groupby('day')['total_bill'].mean().round(2)
+day_highest_avg_bill = avg_bill_by_day.idxmax()
+print("\nAverage total bill amount by day:")
+print(avg_bill_by_day)
+print(f"\nDay with highest average total bill: {day_highest_avg_bill} (${avg_bill_by_day[day_highest_avg_bill]:.2f})")
 
 
 #3.3 Lunch vs Dinner Smoker Analysis
@@ -253,7 +256,6 @@ smoker_total = tips_df.groupby('time')['smoker'].value_counts().unstack(fill_val
 smokers_yesNo = smoker_total.get('Yes', pd.Series(0, index=smoker_total.index))
 
 #Join Dataframe
-# Join dataframes
 combined_diners = pd.DataFrame({
     'total_count': time_count['Total Count'],
     'smokers': smokers_yesNo
@@ -269,18 +271,16 @@ print("\nObservation: Dinner has a higher total number of customers as well as a
 #3.4 Boxplot of Total Bill by Sex
 print("\n")
 print("----------------------------------------------------")
-print("3.4: Boxplot of Total Bill by Sex")
+print("3.4: Boxplot of Tip by Sex")
 print("----------------------------------------------------")
 plt.figure(figsize=(10, 6))
-sns.boxplot
-plt.figure(figsize=(10, 6))
-sns.boxplot(x='sex', y='total_bill', data=tips_df, palette='Set2')
-plt.title('Boxplot of Total Bill by Sex', fontsize=16)
+sns.boxplot(x='sex', y='tip', data=tips_df, palette='Set2')
+plt.title('Boxplot of Tip by Sex', fontsize=16)
 plt.xlabel('Sex', fontsize=14)  
-plt.ylabel('Total Bill ($)', fontsize=14)
+plt.ylabel('Tip Amount ($)', fontsize=14)
 plt.grid(axis='y', alpha=0.75)
-plt.savefig('total_bill_by_sex_boxplot.png')
-print("Boxplot saved as 'total_bill_by_sex_boxplot.png'")
+plt.savefig('tip_by_sex_boxplot.png')
+print("Boxplot saved as 'tip_by_sex_boxplot.png'")
 #plt.show()
 plt.close()     
 
@@ -305,29 +305,28 @@ print(f"\nNumber of Outliers in Tips")
 print(f"Males: {male_outliers_count}")
 print(f"Females: {female_outliers_count}")
 
-print("\nObservation: The boxplot indicates that males generally have a higher tip amount compared to females.")
+outlier_group = 'males' if male_outliers_count > female_outliers_count else 'females'
+print(f"\nObservation: The boxplot alongside the outlier counts shows that {outlier_group} produce more extreme tip values.")
 
 #3.5 Boxblot of Tip Percentage by Sex that are below 70%
 print("\n")
 print("------------------------------------------------------------")
 print("3.5: Boxplot of Tip Percentage by Sex that are below 70%")
 print("------------------------------------------------------------")
-tips_df_filtered = tips_df.assign(
-    tip_percentage=tips_df['tip'] / tips_df['total_bill']
-).loc[lambda df: df['tip_percentage'] < 0.7]
+tips_df_filtered = tips_df[tips_df['tip_percent'] < 70].copy()
 plt.figure(figsize=(10, 6))
-sns.boxplot(x='sex', y='tip_percentage', data=tips_df_filtered, palette='Set3')
+sns.boxplot(x='sex', y='tip_percent', data=tips_df_filtered, palette='Set3')
 plt.title('Boxplot of Tip Percentage by Sex (Below 70%)', fontsize=16)
 plt.xlabel('Sex', fontsize=14)  
-plt.ylabel('Tip Percentage', fontsize=14)
+plt.ylabel('Tip Percentage (%)', fontsize=14)
 plt.grid(axis='y', alpha=0.75)
 plt.savefig('tip_percentage_by_sex_boxplot.png')
 print("Boxplot saved as 'tip_percentage_by_sex_boxplot.png'")
 #plt.show()
 plt.close() 
 
-male_percentages = tips_df_filtered[tips_df_filtered['sex'] == 'Male']['tip_percentage']
-female_percentages = tips_df_filtered[tips_df_filtered['sex'] == 'Female']['tip_percentage']
+male_percentages = tips_df_filtered[tips_df_filtered['sex'] == 'Male']['tip_percent']
+female_percentages = tips_df_filtered[tips_df_filtered['sex'] == 'Female']['tip_percent']
 
 #outliers count
 male_percentage_outliers = count_outliers(male_percentages)
@@ -342,7 +341,28 @@ print(f"\nOutlier/Skewness Analysis of Tip Percentages")
 print(f"Male Outliers: {male_percentage_outliers}, Skewness: {male_is_skewed:.4f}")
 print(f"Female Outliers: {female_percentage_outliers}, Skewness: {female_is_skewed:.4f}")
 print(f"\n{'Males' if male_percentage_outliers > female_percentage_outliers else 'Females'} have more outliers in tip percentage.")
-print(f"{'Males' if abs(male_is_skewed) < abs(female_is_skewed) else 'Females'} have less skewed distribution of data.")
+
+def _skew_magnitude(value):
+    if pd.isna(value):
+        return None
+    numeric_value = float(value)
+    return numeric_value * numeric_value
+
+male_skew_magnitude = _skew_magnitude(male_is_skewed)
+female_skew_magnitude = _skew_magnitude(female_is_skewed)
+if male_skew_magnitude is None and female_skew_magnitude is None:
+    skew_message = "Skewness comparison unavailable due to insufficient data."
+elif male_skew_magnitude is None:
+    skew_message = "Females have less skewed distribution of data."
+elif female_skew_magnitude is None:
+    skew_message = "Males have less skewed distribution of data."
+elif male_skew_magnitude < female_skew_magnitude:
+    skew_message = "Males have less skewed distribution of data."
+elif male_skew_magnitude > female_skew_magnitude:
+    skew_message = "Females have less skewed distribution of data."
+else:
+    skew_message = "Males and Females have similarly skewed distributions."
+print(skew_message)
 
 
 
@@ -374,16 +394,24 @@ print(f"\nMissing values summary:\n{missing_values[missing_values['Missing_Count
 #Missing Values Handling
 print("\nHandling missing values...")
 
-print("Fill 'Type' missing values with mode...")
-avocado_df['Type'] = avocado_df['Type'].fillna(avocado_df['Type'].mode()[0])
+numeric_columns = avocado_df.select_dtypes(include='number').columns
+categorical_columns = avocado_df.select_dtypes(include='object').columns
 
-print("Fill 'Year' missing values with median...")
-avocado_df['Year'] = avocado_df['Year'].fillna(avocado_df['Year'].median())
+for column in categorical_columns:
+    missing_count = avocado_df[column].isna().sum()
+    if missing_count > 0:
+        replacement = avocado_df[column].mode().iat[0]
+        avocado_df[column] = avocado_df[column].fillna(replacement)
+        print(f"Filled missing values in '{column}' with mode '{replacement}' because it preserves the most common category.")
 
-print("Fill AllSize with 0 for missing values...")
-avocado_df['AllSizes'] = avocado_df['AllSizes'].fillna(0) 
+for column in numeric_columns:
+    missing_count = avocado_df[column].isna().sum()
+    if missing_count > 0:
+        replacement = avocado_df[column].median()
+        avocado_df[column] = avocado_df[column].fillna(replacement)
+        print(f"Filled missing values in '{column}' with median {replacement:.2f} to limit the influence of outliers.")
 
-print(f"Total Missing Values: \n{avocado_df.isnull().sum()}") 
+print(f"\nRemaining missing values after imputation:\n{avocado_df.isnull().sum()}")
 
 #4.2 Convert to Categorical Data Type
 print("\n")
@@ -391,12 +419,12 @@ print("----------------------------------------------------")
 print("4.2: Convert to Categorical Data Type")
 print("----------------------------------------------------")
 avocado_df['Type'] = avocado_df['Type'].astype('category')
-avocado_df['Year'] = avocado_df['Year'].astype('category')
+avocado_df['Year'] = avocado_df['Year'].round().astype(int).astype('category')
 avocado_df['Region'] = avocado_df['Region'].astype('category')
+avocado_df['Date'] = pd.to_datetime(avocado_df['Date'], format='%Y-%m-%d')
 
 #Exclude TotalUS and West regions from Region
 avocado_df_no_west = avocado_df[~avocado_df['Region'].isin(['TotalUS', 'West'])].copy()
-avocado_df_no_west['Date'] = pd.to_datetime(avocado_df_no_west['Date'], format='%Y-%m-%d')
 avocado_df_no_west = avocado_df_no_west.sort_values(by='Date')
 
 print(f"Filtered Dataset Dimensions (excluding TotalUS and West): {avocado_df_no_west.shape[0]} rows and {avocado_df_no_west.shape[1]} columns")
@@ -407,8 +435,13 @@ mean_2016 = avocado_df_no_west[avocado_df_no_west['Year'] == 2016]['AveragePrice
 mean_2017 = avocado_df_no_west[avocado_df_no_west['Year'] == 2017]['AveragePrice'].mean()
 print(f"Mean Average Price in 2016: ${mean_2016:.2f}")
 print(f"Mean Average Price in 2017: ${mean_2017:.2f}")
-print("Observation: The mean average price of avocados increased from 2016 to 2017, indicating a ")
-print("rising trend in avocado prices during this period.")
+if mean_2017 > mean_2016:
+    comparison_note = "increased"
+elif mean_2017 < mean_2016:
+    comparison_note = "decreased"
+else:
+    comparison_note = "remained the same"
+print(f"Observation: The mean average price of avocados {comparison_note} from 2016 to 2017.")
 
 
 #4.3 Total Volume by Region Bar Chart
@@ -432,37 +465,40 @@ print("Bar chart saved as 'total_volume_by_region_bar_chart.png'")
 #plt.show()
 plt.close()
 
-highest_volume = vol_by_region.idxmax()
-print(f"\nRegion with Highest Total Volume: {highest_volume} with {vol_by_region.max():,.0f} units sold.")
+highest_volume_region = vol_by_region.idxmax()
+highest_volume_amount = vol_by_region.max()
+print(f"\nRegion with highest total volume: {highest_volume_region} with {highest_volume_amount:,.0f} units sold.")
 
-#Subset thing with histogram
-state_vol_data = avocado_df_no_west[
-    avocado_df_no_west['Region'].str.contains('California|Texas|Florida', na=False)
-]
-#create histogram
+region_focus_df = avocado_df_no_west[avocado_df_no_west['Region'] == highest_volume_region].copy()
+
 plt.figure(figsize=(10, 6))
-sns.histplot(data=state_vol_data, x='TotalVolume', hue='Region', element='step', stat='density', common_norm=False, bins=30)
-plt.title('Histogram of Total Volume for California, Texas, and Florida', fontsize=16)
-plt.xlabel('Total Volume', fontsize=14)
-plt.ylabel('Density', fontsize=14)
-plt.grid(alpha=0.75)
+sns.histplot(region_focus_df['AveragePrice'], bins=25, color='steelblue', edgecolor='black')
+plt.title(f'Histogram of Average Price in {highest_volume_region}', fontsize=16)
+plt.xlabel('Average Price ($)', fontsize=14)
+plt.ylabel('Frequency', fontsize=14)
+plt.grid(axis='y', alpha=0.75)
 plt.savefig('state_total_volume_histogram.png')
 print("Histogram saved as 'state_total_volume_histogram.png'")
 #plt.show()
 plt.close()
 
-print("\nObservation: California has the highest total volume of avocados sold among the regions, ")
-print("likely due to its large population and strong demand for avocados. ")
-print(f"Mean Price: ${state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].mean():.2f} | ")
-print(f"Median Price: ${state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].median():.2f}")
-print(f"Price Range: ${state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].max() - state_vol_data[state_vol_data['Region'] == 'California']['AveragePrice'].min():.2f}")
+mean_price_region = region_focus_df['AveragePrice'].mean()
+median_price_region = region_focus_df['AveragePrice'].median()
+price_range_region = region_focus_df['AveragePrice'].max() - region_focus_df['AveragePrice'].min()
+print(f"\nObservation: In {highest_volume_region}, the mean average price is ${mean_price_region:.2f}, "
+      f"the median is ${median_price_region:.2f}, and prices vary across a range of ${price_range_region:.2f}.\n"
+      "The histogram highlights how prices cluster for the busiest market.")
 
-#Correlation between Average Price and Total Volume
-correlation_price_volume = state_vol_data['AveragePrice'].corr(state_vol_data['TotalVolume'])
-print(f"\nCorrelation coefficient between Average Price and Total Volume: {correlation_price_volume:.4f}") 
-print("Observation: There is a weak negative correlation between Average Price and Total Volume, suggesting that as the ")
-print("price of avocados increases, the total volume sold tends to decrease slightly. This indicates that higher prices ")
-print("may lead to reduced demand.")
+correlation_price_volume = region_focus_df['AveragePrice'].corr(region_focus_df['TotalVolume'])
+print(f"Correlation coefficient between Average Price and Total Volume in {highest_volume_region}: {correlation_price_volume:.4f}")
+if pd.notna(correlation_price_volume):
+    if correlation_price_volume > 0:
+        corr_note = "a slight positive relationship, meaning higher prices coincide with higher volumes in this market."
+    elif correlation_price_volume < 0:
+        corr_note = "a negative relationship, where higher prices tend to align with lower sales volume."
+    else:
+        corr_note = "no linear relationship between price and volume."
+    print(f"Interpretation: The correlation indicates {corr_note}")
 
 
 #4.4 Timeline Plot
@@ -472,19 +508,20 @@ print("4.4: Timeline Plot of Average Price Over Time")
 print("----------------------------------------------------")
 
 monthly_vol = avocado_df_no_west.copy()
-monthly_vol['Month'] = monthly_vol['Month'] = monthly_vol['Date'].dt.month
-monthly_vol['Year'] = monthly_vol['Year'] = monthly_vol['Date'].dt.year
+monthly_vol['Year'] = monthly_vol['Date'].dt.year
+monthly_vol['Month'] = monthly_vol['Date'].dt.month
 
 #Group them thangs
 timeline = (
     monthly_vol.groupby(["Year", "Month"])["TotalVolume"].sum().reset_index()
 )
+timeline['PeriodStart'] = pd.to_datetime(dict(year=timeline['Year'], month=timeline['Month'], day=1))
 
 #Plot that Timeline
 plt.figure(figsize=(12, 6))
 sns.lineplot(
     data=timeline,
-    x=pd.to_datetime(timeline[['Year', 'Month']].assign(DAY=1)),
+    x='PeriodStart',
     y='TotalVolume',
     marker='o',
     color='orange'
@@ -493,7 +530,6 @@ plt.title('Timeline of Total Volume of Avocados Sold Over Time', fontsize=16)
 plt.xlabel('Date', fontsize=14)
 plt.ylabel('Total Volume', fontsize=14)
 plt.grid(alpha=0.75)
-plt.xticks(range(1, 13), ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
 plt.savefig('timeline_total_volume_over_time.png')
 print("Timeline plot saved as 'timeline_total_volume_over_time.png'")
 #plt.show()
@@ -503,10 +539,17 @@ plt.close()
 month_avg_volume = monthly_vol.groupby('Month')['TotalVolume'].mean()
 highest_volume_month = int(month_avg_volume.idxmax())
 month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+top_month_each_year = timeline.loc[timeline.groupby('Year')['TotalVolume'].idxmax(), ['Year', 'Month']]
+unique_top_months = top_month_each_year['Month'].unique()
+if len(unique_top_months) == 1:
+    consistency_note = f"{month_names[unique_top_months[0]]} dominates every year in the dataset."
+else:
+    consistency_note = "Peak sales months vary year by year, although the following months appear most frequently: " + \
+        ", ".join(sorted({month_names[m] for m in unique_top_months}))
 
-print(f"\nObservation: The month with the highest average total volume of avocados sold is {month_names[highest_volume_month]} with an ")
-print("average volume of {month_avg_volume.max():,.0f} units. This could be due to seasonal factors such as increased demand during ")
-print("warmer months or holidays. It could have also just been a good month for guac")
+print(f"\nObservation: The month with the highest overall average volume is {month_names[highest_volume_month]} "
+      f"with an average of {month_avg_volume.max():,.0f} units sold.")
+print(f"{consistency_note} A likely driver of these peaks is demand tied to food-centric events (e.g., summer barbecues or the NFL playoffs) and promotional cycles that boost avocado consumption.")
 
 
 #Thata a wrap
