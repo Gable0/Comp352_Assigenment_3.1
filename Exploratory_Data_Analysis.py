@@ -474,8 +474,9 @@ monthly_vol['Month'] = monthly_vol['Month'] = monthly_vol['Date'].dt.month
 monthly_vol['Year'] = monthly_vol['Year'] = monthly_vol['Date'].dt.year
 
 #Group them thangs
-timeline = monthly_vol.groupby(["Year","Month"])
-['Total Volume'].sum().reset_index()
+timeline = monthly_vol.groupby(["Year","Month"]).agg({
+    'Total Volume': 'sum'
+}).reset_index()
 
 #Plot that Timeline
 plt.figure(figsize=(12, 6))
@@ -491,18 +492,15 @@ print("Timeline plot saved as 'timeline_total_volume_over_time.png'")
 plt.close()
 
 #Highest average
-month_avg = monthly_vol.groupby(['Year', 'Month'])['AveragePrice'].mean()
-highest_avg_index = month_avg.idxmax()
-highest_avg_year, highest_avg_month_num = highest_avg_index
-highest_avg_month = calendar.month_name[int(highest_avg_month_num)]
-highest_avg_value = month_avg.loc[highest_avg_index]
+month_avg_volume = monthly_vol.groupby('Month')['TotalVolume'].mean()
+highest_volume_month = int(month_avg_volume.idxmax())
+month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-print(f"Observation: The month with the highest average price of avocados is {highest_avg_month} {highest_avg_year} ")
-print(f"with an average price of ${highest_avg_value:.2f}.")
-print("Possible reasons for this peak could include seasonal demand fluctuations, supply constraints, or ")
-print("increased consumer interest during that period. Or maybe it was just a really good guac month.")
+print(f"\nObservation: The month with the highest average total volume of avocados sold is {month_names[highest_volume_month]} with an ")
+print("average volume of {month_avg_volume.max():,.0f} units. This could be due to seasonal factors such as increased demand during ")
+print("warmer months or holidays. It could have also just been a good month for guac")
 
 
 #Thats a wrap babyy
 print("\n")
-print("\n END OF ASSIGNMENT 3.1")
+print("END OF ASSIGNMENT 3.1")
