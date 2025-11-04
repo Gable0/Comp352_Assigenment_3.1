@@ -515,7 +515,7 @@ monthly_vol['Month'] = monthly_vol['Date'].dt.month
 timeline = (
     monthly_vol.groupby(["Year", "Month"])["TotalVolume"].sum().reset_index()
 )
-timeline['PeriodStart'] = timeline.apply(lambda x: pd.Timestamp(year=x['Year'], month=x['Month'], day=1), axis=1)
+timeline['PeriodStart'] = timeline.apply(lambda x: pd.Timestamp(year=int(x['Year']), month=int(x['Month']), day=1), axis=1)
 
 #Plot that Timeline
 plt.figure(figsize=(12, 6))
